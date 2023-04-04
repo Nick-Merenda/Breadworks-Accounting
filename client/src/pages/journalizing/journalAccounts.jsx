@@ -12,7 +12,7 @@ function JournalAccounts() {
   const [accountCategories, setCategories] = useState([]);
   const [accountStatements, setStatements] = useState([]);
   const [accountStatus, setStatus] = useState([]);
-  const [isManager, setManager] = useState(false);
+  const [canJournal, setJournal] = useState(false);
 
   const config = {
     headers: {
@@ -37,9 +37,8 @@ function JournalAccounts() {
           decoded = jwt_decode(token);
 
         }
-        if (decoded.user.role === "manager") {
-          setManager(true);
-        }
+
+        if (decoded.user.role === "manager" || decoded.user.role === "basic") setJournal(true);
 
         setLoading(false);
       })
@@ -57,7 +56,7 @@ function JournalAccounts() {
             Loading...
           </div>) : (
           <>
-            <div className="form-primary mb-4">
+            <div className="form-primary mb-4 mt-2">
               <table className="user-table">
                 <thead>
                   <tr>
@@ -100,12 +99,21 @@ function JournalAccounts() {
                 </tbody>
               </table>
             </div>
-            <div className="flex flex-row justify-end">
-              <Link to="new-entry">
-                  <button className="btn-primary">
-                    New Entry
-                  </button>
-              </Link>
+            <div className="flex justify-between">
+              <div>
+                <Link to="entries">
+                  <button className="btn-primary">View Entries</button>
+                </Link>
+              </div>
+              {canJournal && (
+                <div className="flex flex-row justify-end">
+                  <Link to="new-entry">
+                    <button className="btn-primary">
+                      New Entry
+                    </button>
+                  </Link>
+                </div>
+              )}
             </div>
           </>
         )}
