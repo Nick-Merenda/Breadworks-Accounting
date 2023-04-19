@@ -71,8 +71,9 @@ function JournalEntry() {
       });
   
     if (decoded.user.role === "manager") setManager(true);
+
   }, []);
-  
+
 
   const handleReject = () => {
     axios
