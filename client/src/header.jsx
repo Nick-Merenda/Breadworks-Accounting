@@ -46,7 +46,7 @@ function HeadNavbar() {
 					</Link>
 )}
 {decoded && decoded.user.role === "manager" && (
-  <Link to=''>
+  <Link to='/documents'>
     <button className="btn-navbar"
     >
       Documents
