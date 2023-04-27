@@ -3,18 +3,14 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import accountIcon from "./assets/accountIcon.png";
 import LogoPic from "./assets/Breadworks.fw.png";
+import { backendPath } from "../config";
 
 function HeadNavbar() {
-	const [data, setData] = useState(null);
-	const token = localStorage.getItem("token");
-	if (token) {
-		var decoded = jwt_decode(token);
-	}
-	useEffect(() => {
-		fetch("http://localhost:5000/")
-			.then((response) => response.text())
-			.then((text) => setData(text));
-	}, []);
+  const token = localStorage.getItem("token");
+  if (token) {
+    var decoded = jwt_decode(token);
+  }
+
 
 	return (
 		<div>
@@ -109,16 +105,16 @@ function Header() {
               <div className="account-leaflet-info">
                 <p className="mt-auto">Welcome, {Fname}</p>
                 <div className="flex flex-row justify-between">
-                <button className="btn-logout"
-                  onClick={handleLogout}
-                >
-                  Profile
-                </button>
-                <button className="btn-logout"
-                  onClick={handleLogout}
-                >
-                  Logout
-                </button>
+                  <button className="btn-logout"
+                    onClick={handleLogout}
+                  >
+                    Profile
+                  </button>
+                  <button className="btn-logout"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
                 </div>
               </div>
             </div>
@@ -144,7 +140,7 @@ function Header() {
           </div>
         )}
       </div>
-      <HeadNavbar/>
+      <HeadNavbar />
     </header>
   );
 };

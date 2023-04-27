@@ -3,6 +3,8 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
 import { JournalHome, JournalNavbar } from "./journalHome";
+import { backendPath } from "../../../config";
+
 const token = localStorage.getItem("token");
 
 function GeneralJournalList(props) {
@@ -11,18 +13,21 @@ function GeneralJournalList(props) {
   else if (props.status === "pending") statusColor = "text-yellow-500"
   else if (props.status === "rejected") statusColor = "text-red-500"
 
+  var prDisplayed = false;
+
   return (
     <>
       {props.rowID.map((d, index) => (
         <>
           {d.creditAmount === 0 && (
             <tr key={d.id}>
-              <td className={index == 0 ? "user-table-body border-gray-500" : "user-table-body"}>{index == 0 && props.date}</td>
-              <td className={index == 0 ? "user-table-body border-gray-500" : "user-table-body"}>{d.accountName}</td>
-              <td className={index == 0 ? "user-table-body border-gray-500 text-center" : "user-table-body text-center"}>{index == 0 && <Link to={`/journal/entry/${props.id}`}>{props.id}</Link>}</td>
-              <td className={index == 0 ? "user-table-body border-gray-500 text-center" : "user-table-body text-center"}>{d.debitAmount.toLocaleString('en', {useGrouping:true, minimumFractionDigits: 2})}</td>
-              <td className={index == 0 ? "user-table-body border-gray-500" : "user-table-body"}></td>
-              <td className={index == 0 ? "user-table-body border-gray-500 text-center "+statusColor: "user-table-body text-center"}>{index == 0 &&<strong>{props.status}</strong>}</td>
+              <td className={!prDisplayed ? "user-table-body border-gray-500" : "user-table-body"}>{!prDisplayed && props.date}</td>
+              <td className={!prDisplayed ? "user-table-body border-gray-500" : "user-table-body"}>{d.accountName}</td>
+              <td className={!prDisplayed ? "user-table-body border-gray-500 text-center" : "user-table-body text-center"}>{!prDisplayed && (<Link to={`/journal/entry/${props.id}`}>{props.id}</Link>)}</td>
+              <td className={!prDisplayed ? "user-table-body border-gray-500 text-center" : "user-table-body text-center"}>{d.debitAmount.toLocaleString('en', {useGrouping:true, minimumFractionDigits: 2})}</td>
+              <td className={!prDisplayed ? "user-table-body border-gray-500" : "user-table-body"}></td>
+              <td className={!prDisplayed ? "user-table-body border-gray-500 text-center "+statusColor: "user-table-body text-center"}>{!prDisplayed &&<strong>{props.status}</strong>}</td>
+              {prDisplayed = true}
             </tr>
           )}
         </>
@@ -76,7 +81,7 @@ function JournalList() {
     }
 
     axios
-      .get("http://localhost:5000/journal/entries", config)
+      .get(`${backendPath}/journal/entries`, config)
       .then((res) => {
         const { data } = res;
         setID(data.map((d) => d.id));
@@ -122,7 +127,7 @@ function JournalList() {
             <tbody>
               {entryID.map((id, index) => (
                 <GeneralJournalList
-                key={`${index}-${id}`}
+                  key={`${index}-${id}`}
                   date={entryDate[index]}
                   rowID={rowID[index]}
                   id={id}
@@ -165,7 +170,7 @@ function JournalListData(props) {
       <td className="user-table-body">{props.desc}</td>
       <td className="user-table-body text-center">{<Link to={`/journal/entry/${props.id}`}>{props.id}</Link>}</td>
       <td className="user-table-body">{props.date}</td>
-      <td className="user-table-body">{props.user}</td>
+      <td className="user-table-body text-center">{props.user}</td>
       <td className={"text-center user-table-body " + color}><strong>{props.status}</strong></td>
     </tr>
   )
@@ -184,7 +189,7 @@ function JournalListPending() {
 
   useEffect(() => {
     axios
-      .get('http://localhost:5000/journal/entries/pending', config)
+      .get(`${backendPath}/journal/entries/pending`, config)
       .then((res) => {
         setRowID(res.data)
         setLoading(false);

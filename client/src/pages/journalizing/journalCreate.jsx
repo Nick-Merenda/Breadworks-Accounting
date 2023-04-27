@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
+import { backendPath } from "../../../config";
 
 const token = localStorage.getItem("token");
 
 
 function CreateJournal() {
   const defaultRow = {
-    accountID:"none",
+    accountID: "none",
     accountName: "",
     creditAmount: 0.0,
     debitAmount: 0.0,
@@ -19,12 +20,20 @@ function CreateJournal() {
   const [accountList, setAccountList] = useState([])
   const [accountListID, setAccountListId] = useState([])
 
-  const data = new FormData();
   const [rowID, setRowID] = useState([defaultRow])
   const [desc, setDesc] = useState("");
   const [date, setDate] = useState("");
   const [file, setFile] = useState("");
   const [userName, setUsername] = useState(" ")
+
+  const [error, setError] = useState([]);
+  const [errorMsg, setErrMsg] = useState("");
+
+  const data = new FormData();
+  data.append('desc', desc);
+  data.append('date', date);
+  data.append('userName', userName);
+  data.append('file', file);
 
 
 
@@ -41,10 +50,11 @@ function CreateJournal() {
   if (decoded.user.role !== "manager" && decoded.user.role !== "basic") {
     window.location.href = "http://localhost:3000/journal"
   }
+
   useEffect(() => {
     setUsername(decoded.user.id);
     axios
-      .get("http://localhost:5000/chartOfAccounts", config)
+      .get(`${backendPath}/chartOfAccounts`, config)
       .then((res) => {
         const { data } = res
         const filtered = data.filter((account) => account.active)
@@ -52,49 +62,38 @@ function CreateJournal() {
         setAccountListId(filtered.map((d) => d.id));
       })
       .catch((err) => {
-        console.error(err);
+        console.log(err);
       });
 
-  }, [])
+  })
 
   const handleSubmit = () => {
-    const transactions = rowID.map(row => {
-      const accountName = accountList[accountListID.indexOf(row.accountID)];
-      return {
-        accountID: row.accountID,
-        accountName: accountName,
-        creditAmount: row.creditAmount,
-        debitAmount: row.debitAmount,
-        debitAfter: "N/A",
-        creditAfter: "N/A"
-      };
-    });
+    data.set('desc', desc);
+    data.set('date', date);
+    data.set('userName', userName);
+    data.set('file', file);
+
+    rowID.map((d, index) => data.set(`transactions[${index}]`, JSON.stringify(rowID[index])))
     axios
-      .post("http://localhost:5000/journal/new-entry", 
-      {
-      transactions: transactions.map((transaction) => JSON.stringify(transaction)),
-      desc: desc,
-      date: date,
-      userName: userName,
-      file: file,
-      }, config)
+
+      .post(`${backendPath}/journal/new-entry`, data, config)
       .then((res) => {
-        window.location.href = "/journal/entries";
-        console.log(res);
+        window.location.href = "/journal/entries"
+        console.log(res)
       })
       .catch((err) => {
-        console.log(err.response.data.errors);
-      });
-    
+        const errorData = err.response.data.errors;
+        if (errorData === "Credit must equal debit" || errorData === "Must have at least 2 accounts") setErrMsg(errorData);
+        else setError(errorData);
+      })
   }
-  
-  
+
+
 
   const changeAccount = (props) => {
     var account = [...rowID]
     account[props.target.id].accountID = props.target.value;
     account[props.target.id].accountName = accountList[accountListID.indexOf(props.target.value)];
-    console.log(account);
     setRowID(account)
   }
 
@@ -156,7 +155,7 @@ function CreateJournal() {
                 <tr key={index}>
                   <td className="user-table-body">
                     <select
-                      className="txt-primary ml-0"
+                      className={error.includes(`transactions[${index}].accountName`) ? "txt-primary txt-primary-error ml-0" : "txt-primary ml-0"}
                       type="text"
                       id={index}
                       value={rowID[index].accountID}
@@ -202,7 +201,7 @@ function CreateJournal() {
             Date
           </label>
           <input
-            className="txt-primary"
+            className={error.includes("date") ? "txt-primary txt-primary-error" : "txt-primary"}
             id="subject"
             type="date"
             value={date}
@@ -233,6 +232,11 @@ function CreateJournal() {
           />
         </div>
       </div>
+      {errorMsg != "" && (
+        <div className="text-red-500">
+          <label>{errorMsg}</label>
+        </div>
+      )}
       <div className="flex justify-between">
         <Link to="/journal/entries" className="btn-primary btn-color-red">
           Go Back

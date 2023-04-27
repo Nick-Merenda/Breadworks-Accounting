@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import jwt_decode from "jwt-decode";
+import { backendPath } from "../../../config";
 const token = localStorage.getItem("token");
 
 function ChartOfAccounts() {
@@ -28,7 +29,7 @@ function ChartOfAccounts() {
     }
 
     axios
-      .get(`http://localhost:5000/chartOfAccounts${searchParam}`, config)
+      .get(`${backendPath}/chartOfAccounts${searchParam}`, config)
       .then((res) => {
         const { data } = res;
         setIds(data.map((d) => d.id));
@@ -61,7 +62,7 @@ function ChartOfAccounts() {
   const activateAccount = (accountId) => {
     axios
       .put(
-        `http://localhost:5000/chartOfAccounts/activate/${accountId}`,
+        `${backendPath}/chartOfAccounts/activate/${accountId}`,
         {},
         config
       )
@@ -76,7 +77,7 @@ function ChartOfAccounts() {
   const deactivateAccount = (accountId) => {
     axios
       .put(
-        `http://localhost:5000/chartOfAccounts/deactivate/${accountId}`,
+        `${backendPath}/chartOfAccounts/deactivate/${accountId}`,
         {},
         config
       )
@@ -121,7 +122,9 @@ function ChartOfAccounts() {
                     <th className="user-table-header text-center">Category</th>
                     <th className="user-table-header text-center">Statement</th>
                     <th className="user-table-header text-center">Status</th>
-                    <th className="user-table-header">Activate/Deactivate</th>
+                    {isAdmin && (
+                      <th className="user-table-header">Activate/Deactivate</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -133,7 +136,7 @@ function ChartOfAccounts() {
                         window.location.href = `/account/${id}`;
                       }}
                     >
-                      <td className="user-table-body">{id}</td>
+                      <td className="user-table-body py-2">{id}</td>
                       <td className="user-table-body">{accountNames[index]}</td>
                       <td className="user-table-body">{accountDescs[index]}</td>
                       <td className="user-table-body text-center">
@@ -149,18 +152,17 @@ function ChartOfAccounts() {
                           <>deactivated</>
                         )}
                       </td>
-                      {accountStatus[index] === false && (
-                        <td>
-                          <button className="btn-primary btn-color-blue" onClick={() => activateAccount(id)}>
-                            Activate
-                          </button>
-                        </td>
-                      )}
-                      {accountStatus[index] === true && (
-                        <td>
-                          <button className="btn-primary btn-color-red" onClick={() => deactivateAccount(id)}>
-                            Deactivate
-                          </button>
+                      {isAdmin && (
+                        <td className="user-table-body w-1">
+                          {accountStatus[index] ? (
+                            <button className="btn-primary btn-color-red" onClick={() => deactivateAccount(id)}>
+                              Deactivate
+                            </button>
+                          ) : (
+                            <button className="btn-primary btn-color-blue" onClick={() => activateAccount(id)}>
+                              Activate
+                            </button>
+                          )}
                         </td>
                       )}
                     </tr>
@@ -200,7 +202,7 @@ function AdminAddAccount() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/adminDashboard/users", config)
+      .get(`${backendPath}/adminDashboard/users`, config)
       .then((res) => {
         const { data } = res;
         setUsers(data.map((d) => d.id));
@@ -215,7 +217,7 @@ function AdminAddAccount() {
   const handleAddAcct = () => {
     axios
       .post(
-        "http://localhost:5000/chartOfAccounts/createAccount",
+        `${backendPath}/chartOfAccounts/createAccount`,
         {
           number: number,
           order: order,
@@ -261,7 +263,6 @@ function AdminAddAccount() {
     }
 
     setSelected(temp);
-    console.log(selectedUsers);
   };
 
   return (
@@ -338,8 +339,10 @@ function AdminAddAccount() {
                     Select an Option
                   </option>
                   <option value="assets">Assets</option>
-                  <option value="liabilites">Liabilities</option>
+                  <option value="liabilities">Liabilities</option>
                   <option value="equity">Equity</option>
+                  <option value="revenue">Revenue</option>
+                  <option value="expenses">Expenses</option>
                 </select>
               </div>
               <div>

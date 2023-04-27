@@ -1,5 +1,7 @@
 const fs = require('fs');
 
+const { v4: uuidv4 } = require('uuid')
+
 const express = require("express");
 const router = express.Router();
 
@@ -33,7 +35,9 @@ const accountsRef = db.collection('accounts');
 const documentBucket = getStorage().bucket();
 
 // CREATE JOURNAL ENTRIES
-router.post('/new-entry', authUser, async (req, res) => {
+
+router.post('/new-entry', upload.single('file'), authUser, authAccountant(ROLE.MANAGER, ROLE.BASIC), async (req, res) => {
+
   var {
     transactions,
     desc,
@@ -50,7 +54,7 @@ router.post('/new-entry', authUser, async (req, res) => {
   if (error) {
     const errorFull = [];
     for (x = 0; x < error.details.length; x++) {
-      errorFull.push(error.details[x].message);
+      errorFull.push(error.details[x].context.label);
     }
     return res.status(400).json({ errors: errorFull });
   }
@@ -69,28 +73,46 @@ router.post('/new-entry', authUser, async (req, res) => {
   if (totalCredit !== totalDebit) {
     return res.status(400).json({ errors: "Credit must equal debit" })
   }
+  if (transactions.length < 2) {
+    return res.status(400).json({ errors: "Must have at least 2 accounts"})
+  }
 
   const counter = await journalRef.count().get();
   const journalID = (counter.data().count + 1);
 
+
   try {
-    await journalRef.doc(""+journalID).set({
+    await journalRef.doc("" + journalID).set({
       id: journalID,
       transactions,
       desc,
       date,
       userName,
       status: "pending"
-    });
-
+    })
+      .then(async (res) => {
+        const files = fs.readdirSync('uploads/')
+        if (files.length !== 0) {
+          await documentBucket.upload(`uploads/${files[0]}`, {
+            destination: `journalDocuments/${journalID}/${files[0]}`, public: true, metadata: {
+              metadata: {
+                firebaseStorageDownloadTokens: uuidv4(),
+              }
+            }
+          })
+          fs.unlink(`uploads/${files[0]}`, (err) => {
+            console.log(err)
+          });
+        }
+      });
     await eventLog.saveEventLogCreateJournal(req, journalID.toString());
-   res.json('Successfully added journal');
+    res.json('Successfully added journal');
   } catch (error) {
     console.error(error);
     res.status(500).send('Internal server error');
   }
-});
 
+})
 
 
 // GET ALL JOURNAL ENTRIES
@@ -142,6 +164,7 @@ router.put('/entry/approve/:entryID', authUser, authRole(ROLE.MANAGER), async (r
   }
 
   var entry = fetchID.data();
+  var transactions = entry.transactions;
 
   if (entry.status !== "pending") {
     return res.status(400).json({ errors: "Journal not pending" });
@@ -152,26 +175,23 @@ router.put('/entry/approve/:entryID', authUser, authRole(ROLE.MANAGER), async (r
   var accountData;
   var accountRef;
 
-  for (var transaction of entry.transactions) {
+  for (var x = 0; x < transactions.length; x++) {
     try {
-      accountRef = accountsRef.doc(transaction.accountID);
+      accountRef = accountsRef.doc(transactions[x].accountID);
       accountDb = await accountRef.get();
       accountData = accountDb.data();
-      var oldBalance = accountData.balance
+      var newBalance = accountData.balance
 
-      accountData.credit += transaction.creditAmount;
-      accountData.debit += transaction.debitAmount;
-
-      transaction.creditAfter = accountData.credit;
-      transaction.debitAfter = accountData.debit;
+      transactions[x].creditAfter = accountData.credit + transactions[x].creditAmount;
+      transactions[x].debitAfter = accountData.debit + transactions[x].debitAmount;
 
       if (accountData.normalSide === "L" || accountData.normalSide === "l") {
-        accountData.balance += transaction.debitAmount;
-        accountData.balance -= transaction.creditAmount;
+        newBalance += transactions[x].debitAmount;
+        newBalance -= transactions[x].creditAmount;
       }
       else if (accountData.normalSide === "R" || accountData.normalSide === "r") {
-        accountData.balance += transaction.creditAmount;
-        accountData.balance -= transaction.debitAmount;
+        newBalance += transactions[x].creditAmount;
+        newBalance -= transactions[x].debitAmount;
       }
       const updateAccount = {
         name: accountData.name,
@@ -179,7 +199,7 @@ router.put('/entry/approve/:entryID', authUser, authRole(ROLE.MANAGER), async (r
         normalSide: accountData.normalSide,
         category: accountData.category,
         subcategory: accountData.subcategory,
-        balance: oldBalance,
+        balance: accountData.balance,
         credit: accountData.credit,
         debit: accountData.debit,
         assignedUsers: accountData.assignedUsers,
@@ -193,17 +213,17 @@ router.put('/entry/approve/:entryID', authUser, authRole(ROLE.MANAGER), async (r
         normalSide: accountData.normalSide,
         category: accountData.category,
         subcategory: accountData.subcategory,
-        balance: accountData.balance,
-        credit: accountData.credit + transaction.creditAmount,
-        debit: accountData.debit + transaction.debitAmount,
+        balance: newBalance,
+        credit: transactions[x].creditAfter,
+        debit: transactions[x].debitAfter,
         assignedUsers: accountData.assignedUsers,
         comment: accountData.comment,
         statement: accountData.statement
       };
 
       batch.update(accountRef, newAccount);
-      await eventLog.saveEventLogUpdate(req, res, transaction.accountID, updateAccount, newAccount);
-     
+      await eventLog.saveEventLogUpdate(req, res, transactions[x].accountID, updateAccount, newAccount, entry.date);
+
     }
     catch (e) {
       console.log("error happened here")
