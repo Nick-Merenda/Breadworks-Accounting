@@ -197,6 +197,11 @@ function JournalListPending() {
 
   }, [])
 
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+  }
+
   return (
     <>
       <div className="window-primary text-center">
@@ -231,7 +236,7 @@ function JournalListPending() {
                       key={data.id}
                       id={data.id}
                       desc={data.desc}
-                      date={data.date}
+                      date={formatDate(data.date)}
                       user={data.userName}
                       status={data.status}
 

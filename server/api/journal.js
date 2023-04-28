@@ -16,7 +16,7 @@ const { getStorage } = require('firebase-admin/storage')
 const journalDocPath = "fir-demo-94d61.appspot.com/journalDocuments"
 const eventLog = require('./eventLog');
 const jwt_decode = require('jwt-decode');
-
+const path = require('path');
 const db = admin.firestore();
 
 const multer = require("multer")
@@ -90,11 +90,15 @@ router.post('/new-entry', upload.single('file'), authUser, authAccountant(ROLE.M
       userName,
       status: "pending"
     })
-      .then(async (res) => {
-        const files = fs.readdirSync('uploads/')
+    .then(async (res) => {
+      const dirPath = path.join(__dirname, 'uploads');
+      if (fs.existsSync(dirPath)) {
+        const files = fs.readdirSync(dirPath);
         if (files.length !== 0) {
           await documentBucket.upload(`uploads/${files[0]}`, {
-            destination: `journalDocuments/${journalID}/${files[0]}`, public: true, metadata: {
+            destination: `journalDocuments/${journalID}/${files[0]}`, 
+            public: true, 
+            metadata: {
               metadata: {
                 firebaseStorageDownloadTokens: uuidv4(),
               }
@@ -104,15 +108,17 @@ router.post('/new-entry', upload.single('file'), authUser, authAccountant(ROLE.M
             console.log(err)
           });
         }
-      });
+      } else {
+        console.log("uploads directory does not exist.");
+      }
+    });
     await eventLog.saveEventLogCreateJournal(req, journalID.toString());
     res.json('Successfully added journal');
   } catch (error) {
     console.error(error);
     res.status(500).send('Internal server error');
   }
-
-})
+});
 
 
 // GET ALL JOURNAL ENTRIES

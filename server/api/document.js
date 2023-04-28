@@ -193,6 +193,7 @@ router.get('/balanceSheet/:date', authUser, authRole(ROLE.MANAGER), async (req, 
   res.json(accountsData);
 })
 
+  
 
 router.get('/profitAndLoss/:date', authUser, authRole(ROLE.MANAGER), async (req, res) => {
   const docDate = Date.parse(req.params.date) + DAY_OFFSET;

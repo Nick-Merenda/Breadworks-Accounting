@@ -65,7 +65,9 @@ function CreateJournal() {
         console.log(err);
       });
 
-  })
+  }, [])
+
+  
 
   const handleSubmit = () => {
     data.set('desc', desc);
