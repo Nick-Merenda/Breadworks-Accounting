@@ -11,6 +11,10 @@ function LoggedIn() {
   const [expanded, setExpanded] = useState(false);
   const [rowID, setRowID] = useState([])
   const [isLoading, setLoading] = useState(true);
+  const [totalAssets, setTotalAssets] = useState(0.0);
+  const [totalLiabilities, setTotalLiabilities] = useState(0.0);
+  const [totalARplusInventory, setTotalARplusInventory] = useState(0.0);
+  const [netIncome, setNetIncome] = useState(0.0);
 
   const toggleExpand = () => {
     setExpanded(!expanded);
@@ -33,7 +37,46 @@ function LoggedIn() {
         setLoading(false);
       }, [])
 }, []);
+
+useEffect(() => {
+  axios
+    .get(`${backendPath}/ratio/totalassets`, config)
+    .then((res) => {
+      setTotalAssets(res.data.totalAssets)
+    }, [])
+}, []);
+
+useEffect(() => {
+  axios
+    .get(`${backendPath}/ratio/totalliabilities`, config)
+    .then((res) => {
+      setTotalLiabilities(res.data.totalLiabilities)
+    }, [])
+}, []);
+
+useEffect(() => {
+  axios
+    .get(`${backendPath}/ratio/totalarplusinventory`, config)
+    .then((res) => {
+      setTotalARplusInventory(res.data.totalARplusInventory)
+    }, [])
+}, []);
+
+useEffect(() => {
+  axios
+    .get(`${backendPath}/ratio/netincome`, config)
+    .then((res) => {
+      setNetIncome(res.data.netIncome)
+    }, [])
+}, []);
   
+
+const currentRatio = totalAssets / totalLiabilities;
+
+const quickRatio = (totalAssets - totalARplusInventory)/ totalLiabilities;
+
+const RoA = (netIncome / totalAssets).toFixed(3);
+
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -165,19 +208,20 @@ function LoggedIn() {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td className="border px-4 py-2 font-bold text-left">Current Ratio</td>
-            <td className="border px-4 py-2 text-right text-green-400">11.26</td>
-          </tr>
-          <tr>
-            <td className="border px-4 py-2 font-bold text-left">Quick Ratio</td>
-            <td className="border px-4 py-2 text-right text-green-400">3.40</td>
-          </tr>
-          <tr>
-            <td className="border px-4 py-2 font-bold text-left">Return on Assets</td>
-            <td className="border px-4 py-2 text-right text-red-700">0.0230</td>
-          </tr>
-        </tbody>
+  <tr>
+    <td className="border px-4 py-2 font-bold text-left">Current Ratio</td>
+    <td className={`border px-4 py-2 text-right ${currentRatio < 1.0 ? 'text-red-700' : currentRatio >= 1.0 && currentRatio <= 1.9 ? 'text-yellow-300' : 'text-green-400'}`}>{currentRatio}</td>
+  </tr>
+  <tr>
+    <td className="border px-4 py-2 font-bold text-left">Quick Ratio</td>
+    <td className={`border px-4 py-2 text-right ${quickRatio < 1.0 ? 'text-red-700' : quickRatio >= 1.0 && quickRatio <= 1.9 ? 'text-yellow-300' : 'text-green-400'}`}>{quickRatio}</td>
+  </tr>
+  <tr>
+    <td className="border px-4 py-2 font-bold text-left">Return on Assets</td>
+    <td className={`border px-4 py-2 text-right ${RoA < 1.0 ? 'text-red-700' : RoA >= 1.0 && RoA <= 1.9 ? 'text-yellow-300' : 'text-green-400'}`}>{RoA}</td>
+  </tr>
+</tbody>
+
       </table>
     </div>
   </div>
